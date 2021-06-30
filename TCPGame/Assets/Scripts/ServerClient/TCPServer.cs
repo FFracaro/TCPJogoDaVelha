@@ -16,10 +16,18 @@ public class TCPServer : MonoBehaviour
     private Thread tcpListenerThread;
     // Create handle to connected tcp client. 	
     private TcpClient connectedTcpClient;
+
+    private string ServerIpAddress;
+    private int ServerPort;
     #endregion
 
     public void InitiateThreadServer()
     {
+        InformationHolder Info = FindObjectOfType<InformationHolder>();
+
+        ServerIpAddress = Info.GetIpAddress();
+        ServerPort = Info.GetPort();
+
         // Start TcpServer background thread 
         tcpListenerThread = new Thread(new ThreadStart(ServerListener));
         tcpListenerThread.IsBackground = true;
@@ -29,10 +37,13 @@ public class TCPServer : MonoBehaviour
     private void ServerListener()
     {
         try
-        {
-            // Create listener on localhost port 8052. 			
-            tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8052);
+        {		
+            tcpListener = new TcpListener(IPAddress.Parse(ServerIpAddress), ServerPort);
             tcpListener.Start();
+
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<UIManager>().ServerUICommunication(ServerMessageType.SERVERON, "Servidor Iniciado.");
+            });
 
             Debug.Log("Servidor iniciado.");
 
@@ -41,6 +52,11 @@ public class TCPServer : MonoBehaviour
             {
                 using (connectedTcpClient = tcpListener.AcceptTcpClient())
                 {
+                    // CLIENT CONNECTED
+                    ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                        FindObjectOfType<UIManager>().ClientConnectedUpdateLoadingServerUI();
+                    });
+
                     // Get a stream object for reading 					
                     using (NetworkStream stream = connectedTcpClient.GetStream())
                     {
@@ -54,6 +70,10 @@ public class TCPServer : MonoBehaviour
                             // Convert byte array to string message. 							
                             string clientMessage = Encoding.ASCII.GetString(incommingData);
                             Debug.Log("client message received as: " + clientMessage);
+
+                            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                                FindObjectOfType<MessageInterpreter>().ParseMessageReceived(clientMessage);
+                            });
                         }
                     }
                 }
@@ -66,19 +86,23 @@ public class TCPServer : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void Update()
+    public void MessageToSend(string message)
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            SendMessage();
-        }
+        byte[] messageToSendAsByteArray = Encoding.ASCII.GetBytes(message);
+        SendMessage(messageToSendAsByteArray);
+    }
+
+    public void CloseServer()
+    {
+        // Send msg to client
+        if (tcpListener != null)
+            tcpListener.Stop();
     }
 
     /// <summary> 	
     /// Send message to client using socket connection. 	
     /// </summary> 	
-    private void SendMessage()
+    private void SendMessage(byte[] messageToSend)
     {
         if (connectedTcpClient == null)
         {
@@ -91,16 +115,14 @@ public class TCPServer : MonoBehaviour
             NetworkStream stream = connectedTcpClient.GetStream();
             if (stream.CanWrite)
             {
-                string serverMessage = "This is a message from your server.";
-                // Convert string message to byte array.                 
-                byte[] serverMessageAsByteArray = Encoding.ASCII.GetBytes(serverMessage);
                 // Write byte array to socketConnection stream.               
-                stream.Write(serverMessageAsByteArray, 0, serverMessageAsByteArray.Length);
+                stream.Write(messageToSend, 0, messageToSend.Length);
                 Debug.Log("Server sent his message - should be received by client");
             }
         }
         catch (SocketException socketException)
         {
+            // Error popup
             Debug.Log("Socket exception: " + socketException);
         }
     }
