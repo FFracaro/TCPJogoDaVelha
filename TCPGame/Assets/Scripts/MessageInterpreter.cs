@@ -16,6 +16,8 @@ public class MessageInterpreter : MonoBehaviour
 
     private void ExecuteCode(int code, string[] messages)
     {
+        Debug.Log("Código recebido:" + code);
+
         switch(code)
         {
             case 100:
@@ -35,6 +37,11 @@ public class MessageInterpreter : MonoBehaviour
     {
         int pieceColor = int.Parse(messages[1]);
         int whoGoesFirst = int.Parse(messages[2]);
+
+        Debug.Log("Who goes first: " + whoGoesFirst);
+
+        FindObjectOfType<UIManager>().CloseLoadingClientPanel();
+
         GetComponent<GameBehaviour>().StartGameClient(pieceColor, whoGoesFirst);
     }
 
@@ -65,7 +72,6 @@ public class MessageInterpreter : MonoBehaviour
         }
         else
         {
-            // Update board and start new turn
             GetComponent<GameBehaviour>().StartTurn();
 
         }
@@ -87,7 +93,7 @@ public class MessageInterpreter : MonoBehaviour
     {
         string message = "101:" + position + ":" + pieceColor + ":" + win;
 
-        //FindObjectOfType<TCPClient>().MessageToSend(message);
+        FindObjectOfType<TCPClient>().MessageToSend(message);
     }
 
     public void ComposeMessageUpdateBoard(int position, int pieceColor, int win)

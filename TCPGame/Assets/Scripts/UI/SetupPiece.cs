@@ -32,14 +32,17 @@ public class SetupPiece : MonoBehaviour
 
     public void DisableCollider()
     {
-        if(HasCollider)
-            GetComponent<BoxCollider2D>().enabled = false;
+        HasCollider = false;
     }
 
     public void EnableCollider()
     {
-        if(HasCollider)
-            GetComponent<BoxCollider2D>().enabled = true;
+        HasCollider = true;
+    }
+
+    public bool IsClickable()
+    {
+        return HasCollider;
     }
 
     public int GetPiecePosition()

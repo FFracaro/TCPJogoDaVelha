@@ -6,26 +6,27 @@ public class InteractionManager : MonoBehaviour
 {
     bool CanInteract = false;
 
-    InformationHolder Info;
+    InformationHolder Info = null;
 
-    private void Start()
-    {
-        
-    }
-
+    /*
     // Update is called once per frame
     void Update()
     {
-        if(CanInteract)
+        if (Input.GetMouseButtonDown (0) && CanInteract)
         {
-            if (Input.GetMouseButtonDown (0))
-            {
-                Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-                RaycastHit2D hit = Physics2D.GetRayIntersection (ray, Mathf.Infinity);
+            //Debug.Log("Clicked: x: " + Input.mousePosition.x + " y: " + Input.mousePosition.y);
+            Ray2D ray = new Ray2D(Camera.main.ScreenToWorldPoint(new Vector2(Input.mousePosition.x, Input.mousePosition.y)), Vector2.zero);
+            RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction);
 
-                if (hit.collider != null && hit.collider.tag == "GamePiece")
+            if (hit.collider != null && hit.collider.gameObject.tag == "piece")
+            {
+                SetupPiece piece = hit.collider.gameObject.GetComponent<SetupPiece>();
+                Debug.Log("Piece clicked: " + piece.GetPiecePosition());
+                Debug.Log("Piece is clickable: " + piece.IsClickable());
+
+                if(piece.IsClickable())
                 {
-                    SetupPiece piece = hit.collider.gameObject.GetComponent<SetupPiece>();
+                    CanInteract = false;
 
                     piece.DisableCollider();
 
@@ -34,16 +35,40 @@ public class InteractionManager : MonoBehaviour
 
                     piece.SetPieceImage(Info.GetPieceColor());
 
-                    FindObjectOfType<GameBehaviour>().FinishTurn(piece.GetPiecePosition(), Info.GetPieceColor());
-
-                    CanInteract = false;
+                    GetComponent<GameBehaviour>().FinishTurn(piece.GetPiecePosition(), Info.GetPieceColor());  
                 }
-            }         
+            }
+        }         
+    }*/
+
+    public void WasClicked(GameObject pieceClicked)
+    {
+        if(CanInteract)
+        {
+            SetupPiece piece = pieceClicked.GetComponent<SetupPiece>();
+            Debug.Log("Piece clicked: " + piece.GetPiecePosition());
+            Debug.Log("Piece is clickable: " + piece.IsClickable());
+
+            if (piece.IsClickable())
+            {
+                CanInteract = false;
+
+                piece.DisableCollider();
+
+                if (Info == null)
+                    Info = FindObjectOfType<InformationHolder>();
+
+                piece.SetPieceImage(Info.GetPieceColor());
+
+                GetComponent<GameBehaviour>().FinishTurn(piece.GetPiecePosition(), Info.GetPieceColor());
+            }
         }
     }
 
     public void SetInteractionActive()
     {
         CanInteract = true;
+
+        Debug.Log("Can Interact.");
     }
 }

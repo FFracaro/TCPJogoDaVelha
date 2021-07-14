@@ -12,6 +12,9 @@ public class GameBehaviour : MonoBehaviour
     [SerializeField]
     BoardUIManager BoardUIController;
 
+    [SerializeField]
+    bool IsServer = true;
+
     private int[] BoardPieces = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     public void GetInformationHolder()
@@ -19,9 +22,11 @@ public class GameBehaviour : MonoBehaviour
         Info = FindObjectOfType<InformationHolder>();
     }
 
+    // 0 = red pieces = -1
+    // 1 = blue pieces = 1
     public void PickRandomPiece()
     {
-        int ServerColorChoice = Random.Range(0, 1);
+        int ServerColorChoice = Random.Range(0, 2);
 
         if (ServerColorChoice == 0)
             Info.SetPieceColor(-1);
@@ -30,13 +35,17 @@ public class GameBehaviour : MonoBehaviour
 
     }
 
+    // play second = 1
+    // play first = 0
     public int WhoGoesFirst()
     {
-        int ServerChoice = Random.Range(0, 1);
+        int ServerChoice = Random.Range(0, 2);
 
         Info.SetPlayFirst(ServerChoice);
 
-        return ServerChoice;
+        if (ServerChoice == 0)
+            return 1;
+        return 0;
     }
 
     public void StartGame()
@@ -45,7 +54,7 @@ public class GameBehaviour : MonoBehaviour
 
         PickRandomPiece();
 
-        Interpreter.ComposeMessageStartGame(Info.GetPieceColor(), WhoGoesFirst());
+        Interpreter.ComposeMessageStartGame((-1) * Info.GetPieceColor(), WhoGoesFirst());
 
         ShowBoard();
 
@@ -53,12 +62,15 @@ public class GameBehaviour : MonoBehaviour
 
     public void StartGameClient(int pieceColor, int WhoGoesFirst)
     {
+        Debug.Log("Game Client Started.");
+
         GetInformationHolder();
 
         Info.SetPieceColor(pieceColor);
 
         Info.SetPlayFirst(WhoGoesFirst);
 
+        Debug.Log("Starting setting board up.");
         ShowBoard();
     }
 
@@ -85,7 +97,7 @@ public class GameBehaviour : MonoBehaviour
 
     public void StartTurn()
     {
-        FindObjectOfType<BoardUIManager>().UpdateTurnMessage(1f, true);
+        FindObjectOfType<BoardUIManager>().UpdateTurnMessage(0.2f, true);
 
         FindObjectOfType<InteractionManager>().SetInteractionActive();
 
@@ -96,7 +108,7 @@ public class GameBehaviour : MonoBehaviour
     public void FinishTurn(int positionClicked, int colorPiece)
     {
 
-        FindObjectOfType<BoardUIManager>().UpdateTurnMessage(0f, false);
+        FindObjectOfType<BoardUIManager>().UpdateTurnMessage(0.2f, false);
 
         UpdateBoardScore(positionClicked, colorPiece);
 
@@ -105,25 +117,41 @@ public class GameBehaviour : MonoBehaviour
         switch(WinCheckerResult)
         {
             case 1:
-                if(Info.GetPieceColor() == 1)
-                {
+                if(IsServer)
                     Interpreter.ComposeMessageUpdateBoard(positionClicked, 1, 1);
+                else
+                    Interpreter.ComposeMessageUpdateBoardClient(positionClicked, 1, 1);
+
+                if (Info.GetPieceColor() == 1)
                     EndGame(1);
-                }
+                else
+                    EndGame(-1);
                 break;
             case 2:
-                if(Info.GetPieceColor() == -1)
-                {
+                if(IsServer)
                     Interpreter.ComposeMessageUpdateBoard(positionClicked, -1, 1);
+                else
+                    Interpreter.ComposeMessageUpdateBoardClient(positionClicked, -1, 1);
+
+                if (Info.GetPieceColor() == -1)
+                    EndGame(1);
+                else
                     EndGame(-1);
-                }
                 break;
             case 3:
-                Interpreter.ComposeMessageUpdateBoard(positionClicked, Info.GetPieceColor(), 0);
+                if(IsServer)
+                    Interpreter.ComposeMessageUpdateBoard(positionClicked, Info.GetPieceColor(), 0);
+                else
+                    Interpreter.ComposeMessageUpdateBoardClient(positionClicked, Info.GetPieceColor(), 0);
                 break;
             case -1:
-                Interpreter.ComposeMessageUpdateBoard(positionClicked, Info.GetPieceColor(), 2);
+                if(IsServer)
+                    Interpreter.ComposeMessageUpdateBoard(positionClicked, Info.GetPieceColor(), 2);
+                else
+                    Interpreter.ComposeMessageUpdateBoardClient(positionClicked, Info.GetPieceColor(), 2);
                 EndGame(0);
+                break;
+            default:
                 break;
         }
     }
@@ -143,7 +171,20 @@ public class GameBehaviour : MonoBehaviour
 
     public void EndGame(int whoWon)
     {
-        // Show winning interface
+        UIManager UI = FindObjectOfType<UIManager>();
+
+        switch(whoWon)
+        {
+            case 0:
+                UI.ShowResults("Empate");
+                break;
+            case 1:
+                UI.ShowResults("Vitória");
+                break;
+            case -1:
+                UI.ShowResults("Derrota");
+                break;
+        }
     }
 
     // 1 = blue victory
@@ -165,20 +206,19 @@ public class GameBehaviour : MonoBehaviour
         Sum[6] = BoardPieces[0] + BoardPieces[4] + BoardPieces[8];
         Sum[7] = BoardPieces[2] + BoardPieces[4] + BoardPieces[6];
 
-        int BoardIncomplete = 0;
-
         foreach(int k in Sum)
         {
             if (k == 3)
                 return 1;
             if (k == -3)
                 return 2;
-            if (k == 0)
-                BoardIncomplete++;
         }
 
-        if (BoardIncomplete > 0)
-            return 3;
+        foreach(int k in BoardPieces)
+        {
+            if (k == 0)
+                return 3;
+        }
 
         return -1;
     }

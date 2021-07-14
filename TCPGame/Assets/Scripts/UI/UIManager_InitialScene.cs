@@ -38,7 +38,8 @@ public class UIManager_InitialScene : MonoBehaviour
             else
             {
                 Debug.Log("CLIENT");
-                //StartCoroutine(LoadYourAsyncScene("ClientScene"));
+
+                StartCoroutine(LoadYourAsyncScene("ClientScene"));
             }
         }
     }

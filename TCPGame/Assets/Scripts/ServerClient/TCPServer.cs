@@ -37,9 +37,10 @@ public class TCPServer : MonoBehaviour
     private void ServerListener()
     {
         try
-        {		
-            tcpListener = new TcpListener(IPAddress.Parse(ServerIpAddress), ServerPort);
-            tcpListener.Start();
+        {
+            tcpListener = new TcpListener(IPAddress.Any, ServerPort);
+            //tcpListener = new TcpListener(IPAddress.Parse(ServerIpAddress), ServerPort);
+            tcpListener.Start(1);
 
             ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
                 FindObjectOfType<UIManager>().ServerUICommunication(ServerMessageType.SERVERON, "Servidor Iniciado.");
@@ -81,7 +82,9 @@ public class TCPServer : MonoBehaviour
         }
         catch (SocketException socketException)
         {
-            // Error popup
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<ErrorReport>().ShowSocketError(socketException.ToString());
+            });
             Debug.Log("SocketException " + socketException.ToString());
         }
     }
@@ -122,7 +125,10 @@ public class TCPServer : MonoBehaviour
         }
         catch (SocketException socketException)
         {
-            // Error popup
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<ErrorReport>().ShowSocketError(socketException.ToString());
+            });
+
             Debug.Log("Socket exception: " + socketException);
         }
     }

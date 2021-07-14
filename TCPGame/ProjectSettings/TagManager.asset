@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - GamePiece
+  - piece
   layers:
   - Default
   - TransparentFX

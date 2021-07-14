@@ -16,34 +16,31 @@ public class TCPClient : MonoBehaviour
     private int ServerPort;
     #endregion
 
-    // Use this for initialization 	
-    void Start()
+    public void ConnectToTcpServer()
     {
-        ConnectToTcpServer();
-    }
+        InformationHolder Info = FindObjectOfType<InformationHolder>();
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            SendMessage();
-        }
-    }
+        ServerIpAddress = Info.GetIpAddress();
+        ServerPort = Info.GetPort();
 
-    /// <summary> 	
-    /// Setup socket connection. 	
-    /// </summary> 	
-    private void ConnectToTcpServer()
-    {
         try
         {
             clientReceiveThread = new Thread(new ThreadStart(ListenForData));
             clientReceiveThread.IsBackground = true;
             clientReceiveThread.Start();
+
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<UIManager>().ClientUICommunication(ServerMessageType.CLIENTON, "Cliente iniciado.");
+            });
+
+            Debug.Log("Cliente iniciado.");
         }
         catch (Exception e)
         {
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<ErrorReport>().ClientConnectionError(e.ToString());
+            });
+
             Debug.Log("On client connect exception " + e);
         }
     }
@@ -55,7 +52,7 @@ public class TCPClient : MonoBehaviour
     {
         try
         {
-            socketConnection = new TcpClient("localhost", 8052);
+            socketConnection = new TcpClient(ServerIpAddress, ServerPort);
             Byte[] bytes = new Byte[1024];
             while (true)
             {
@@ -66,25 +63,39 @@ public class TCPClient : MonoBehaviour
                     // Read incomming stream into byte arrary. 					
                     while ((length = stream.Read(bytes, 0, bytes.Length)) != 0)
                     {
-                        var incommingData = new byte[length];
-                        Array.Copy(bytes, 0, incommingData, 0, length);
+                        var serverData = new byte[length];
+                        Array.Copy(bytes, 0, serverData, 0, length);
                         // Convert byte array to string message. 						
-                        string serverMessage = Encoding.ASCII.GetString(incommingData);
+                        string serverMessage = Encoding.ASCII.GetString(serverData);
                         Debug.Log("server message received as: " + serverMessage);
+
+                        ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                            FindObjectOfType<MessageInterpreter>().ParseMessageReceived(serverMessage);
+                        });
                     }
                 }
             }
         }
         catch (SocketException socketException)
         {
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<ErrorReport>().ShowSocketError(socketException.ToString());
+            });
+
             Debug.Log("Socket exception: " + socketException);
         }
+    }
+
+    public void MessageToSend(string message)
+    {
+        byte[] messageToSendAsByteArray = Encoding.ASCII.GetBytes(message);
+        SendMessage(messageToSendAsByteArray);
     }
 
     /// <summary> 	
     /// Send message to server using socket connection. 	
     /// </summary> 	
-    private void SendMessage()
+    private void SendMessage(byte[] messageToSend)
     {
         if (socketConnection == null)
         {
@@ -95,18 +106,29 @@ public class TCPClient : MonoBehaviour
             // Get a stream object for writing. 			
             NetworkStream stream = socketConnection.GetStream();
             if (stream.CanWrite)
-            {
-                string clientMessage = "This is a message from one of your clients.";
-                // Convert string message to byte array.                 
-                byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
-                // Write byte array to socketConnection stream.                 
-                stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
+            {               
+                stream.Write(messageToSend, 0, messageToSend.Length);
                 Debug.Log("Client sent his message - should be received by server");
             }
         }
         catch (SocketException socketException)
         {
+            ExecuteOnMainThread.RunOnMainThread.Enqueue(() => {
+                FindObjectOfType<ErrorReport>().ShowSocketError(socketException.ToString());
+            });
+
             Debug.Log("Socket exception: " + socketException);
+        }
+    }
+
+    public void CloseClient()
+    {
+        if(socketConnection != null)
+        {
+            if (socketConnection.Connected)
+            {
+                socketConnection.Close();
+            }
         }
     }
 }

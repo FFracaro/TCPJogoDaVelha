@@ -32,14 +32,21 @@ public class BoardUIManager : MonoBehaviour
     RectTransform EnemyTurnMessage;
 
     [SerializeField]
+    GameObject EnemyTurnPanel;
+
+    [SerializeField]
     float AnimationSpeed = 0f;
 
     [SerializeField]
     SetupPiece[] BoardPieces;
 
+    [SerializeField]
+    GameObject MainMenu;
+
     private void Start()
     {
-        SetupBoard(1, -1);
+        foreach(SetupPiece s in BoardPieces)
+            s.EnableCollider();
     }
 
     public void SetupBoard(int player1Piece, int player2Piece)
@@ -54,7 +61,7 @@ public class BoardUIManager : MonoBehaviour
 
         Player2.DOAnchorPos(new Vector2(500, 200), AnimationSpeed);
 
-        Board.DOAnchorPos(new Vector2(0, 0), AnimationSpeed);
+        //Board.DOAnchorPos(new Vector2(0, 0), AnimationSpeed);
 
         yield return new WaitForSeconds(0.5f);
 
@@ -73,7 +80,31 @@ public class BoardUIManager : MonoBehaviour
 
     public void UpdateTurnMessage(float delay, bool PlayOrNot)
     {
-        StartCoroutine(ShowTurnMessage(delay, PlayOrNot));
+        if (PlayOrNot)
+        {
+            if (EnemyTurnPanel.activeSelf)
+            {
+                EnemyTurnMessage.DOAnchorPos(new Vector2(0, 150), 0f);
+
+                EnemyTurnPanel.SetActive(false);
+            }
+
+            YourTurnObject.SetActive(true);
+
+            YourTurnMessage.DOAnchorPos(new Vector2(0, 0), AnimationSpeed * 2f);
+
+        }
+        else
+        {
+            if (YourTurnObject.activeSelf)
+            {
+                YourTurnMessage.DOAnchorPos(new Vector2(0, 150), 0f);
+            }
+
+            EnemyTurnPanel.SetActive(true);
+
+            EnemyTurnMessage.DOAnchorPos(new Vector2(0, 0), AnimationSpeed * 2f);
+        }
     }
 
     IEnumerator ShowTurnMessage(float delay, bool Play)
@@ -84,18 +115,14 @@ public class BoardUIManager : MonoBehaviour
         {
             if (EnemyTurnObject.activeSelf)
             {
-                EnemyTurnMessage.DOAnchorPos(new Vector2(0, 150), AnimationSpeed);
-
-                yield return new WaitForSeconds(0.1f);
+                EnemyTurnMessage.DOAnchorPos(new Vector2(0, 150), 0f);
 
                 EnemyTurnObject.SetActive(false);
             }
 
             YourTurnObject.SetActive(true);
 
-            YourTurnMessage.DOAnchorPos(new Vector2(0,0), AnimationSpeed);
-
-            yield return new WaitForSeconds(0.1f);
+            YourTurnMessage.DOAnchorPos(new Vector2(0,0), AnimationSpeed * 2f);
     
         }
         else
@@ -103,9 +130,7 @@ public class BoardUIManager : MonoBehaviour
             if(YourTurnObject.activeSelf)
             {
 
-                YourTurnMessage.DOAnchorPos(new Vector2(0, 150), AnimationSpeed);
-
-                yield return new WaitForSeconds(0.1f);
+                YourTurnMessage.DOAnchorPos(new Vector2(0, 150), 0f);
 
                 YourTurnObject.SetActive(false);
              
@@ -113,11 +138,21 @@ public class BoardUIManager : MonoBehaviour
 
             EnemyTurnObject.SetActive(true);
 
-            EnemyTurnMessage.DOAnchorPos(new Vector2(0, 0), AnimationSpeed);
-
-            yield return new WaitForSeconds(0.1f);
+            EnemyTurnMessage.DOAnchorPos(new Vector2(0, 0), AnimationSpeed * 2f);
         }
 
+    }
+
+    public void OpenMenuScreen()
+    {
+        if (!MainMenu.activeSelf)
+            MainMenu.SetActive(true);
+    }
+
+    public void CloseMenuScreen()
+    {
+        if (MainMenu.activeSelf)
+            MainMenu.SetActive(false);
     }
 
 }
